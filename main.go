@@ -164,7 +164,7 @@ func db_get_user_sessions(db *sql.DB, user string) ([]session, error) {
 }
 
 func db_new_user(db *sql.DB, user string) error {
-	cmd := `INSERT INTO Users(username) values($1);`
+	cmd := `INSERT INTO Users(username) values(?);`
 	_, err := db.Exec(cmd, user)
 	if err != nil {
 		return err
