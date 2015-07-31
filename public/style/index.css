@@ -1,7 +1,7 @@
 .list-item {
   padding: 5px;
   margin-bottom: 7px;
-  width: 600px;
+  width: 700px;
   background: #fefefe;
   box-shadow: 0px 1px 3px #ff0000;
   height: 30px;
@@ -26,14 +26,14 @@
 }
 
 .list-item-rating {
-  margin-right: -290px;
+  margin-right: -170px;
   margin-left: auto;
   display: inline-block;
   float: right;
 }
 
 .list-item-hearts {
-  margin-right: -150px;
+  margin-right: -40px;
   display: inline-block;
   float: right;
   margin-top: 19px;
