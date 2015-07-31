@@ -36,6 +36,7 @@ type indexPageData struct {
 }
 
 type programPageData struct {
+	Name        string
 	AvgRating   int
 	AvgDuration int
 	Heart       []int
@@ -455,7 +456,11 @@ func launch_web(db *sql.DB) {
 		avgRating := 0
 		avgDuration := 0
 		avgHearts := 0
+		t := ""
+		s := ""
 		for _, v := range ses {
+			t = v.Title
+			s = v.Show
 			h := make([]int, 0)
 			for i := 0; i < v.Heart; i++ {
 				h = append(h, i)
@@ -473,7 +478,8 @@ func launch_web(db *sql.DB) {
 		for i := 0; i < avgHearts; i++ {
 			avgh = append(avgh, i)
 		}
-		dat := programPageData{avgRating, avgDuration, avgh, pd}
+		name := fmt.Sprintf("%s: %s", t, s)
+		dat := programPageData{name, avgRating, avgDuration, avgh, pd}
 		ren.HTML(200, "program", dat)
 	})
 
