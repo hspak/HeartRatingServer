@@ -41,11 +41,6 @@ func setup_db() *sql.DB {
 		panic(err.Error())
 	}
 
-	_, err = db.Exec(`DROP DATABASE HeartRating`)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	_, err = db.Exec(`CREATE DATABASE IF NOT EXISTS HeartRating`)
 	if err != nil {
 		log.Fatal(err)
@@ -264,6 +259,11 @@ func launch_web(db *sql.DB) {
 }
 
 func test_data(db *sql.DB) {
+	_, err = db.Exec(`DROP DATABASE HeartRating`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	db_new_user(db, "alice")
 	db_new_user(db, "bob")
 	db_new_user(db, "carl")
