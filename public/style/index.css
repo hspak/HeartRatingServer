@@ -1,0 +1,40 @@
+.list-item {
+  padding: 10px;
+  margin-bottom: 10px;
+  width: 600px;
+  background: #fefefe;
+  box-shadow: 0px 1px 3px #ff0000;
+}
+
+.list-item-name {
+  /* position: relative; */
+  padding: 10px;
+  height: -10px;
+  display: block;
+  float: left;
+  /* line-height: -50px; */
+}
+
+.list-item-show {
+  display: inline-block;
+  float: left;
+}
+
+.list-item-title {
+  display: inline-block;
+  font-weight: bold;
+  float: left;
+}
+
+.list-item-duration {
+  text-align: right;
+}
+
+.list-item-rating {
+  text-align: right;
+}
+
+.list-item-hearts {
+  text-align: right;
+}
+ 

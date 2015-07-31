@@ -38,8 +38,9 @@ type userPageData struct {
 	User     string
 	Title    string
 	Show     string
-	Heart    int
+	Heart    []int
 	Duration int
+	Rating   int
 }
 
 type User struct {
@@ -330,6 +331,12 @@ func db_new_data(db *sql.DB) error {
 	return nil
 }
 
+func calc_rating(heart int, duration int) int {
+	dur_rating := (duration * 7) / (6000 * 22)
+	heart_rating := (15 * heart) / 4
+	return dur_rating * heart_rating
+}
+
 func launch_web(db *sql.DB) {
 	m := martini.Classic()
 	m.Use(render.Renderer())
@@ -339,7 +346,12 @@ func launch_web(db *sql.DB) {
 		for _, u := range users {
 			s, _ := db_get_user_sessions(db, u)
 			for _, v := range s {
-				pd = append(pd, userPageData{u, v.Title, v.Show, v.Heart, v.Duration})
+				h := make([]int, 0)
+				for i := 0; i < v.Heart; i++ {
+					h = append(h, i)
+				}
+				rating := calc_rating(v.Heart, v.Duration)
+				pd = append(pd, userPageData{u, v.Title, v.Show, h, v.Duration, rating})
 			}
 		}
 		dat := indexPageData{pd}
@@ -350,7 +362,12 @@ func launch_web(db *sql.DB) {
 		user := params["user"]
 		ses, _ := db_get_user_sessions(db, user)
 		for _, v := range ses {
-			pd = append(pd, userPageData{user, v.Title, v.Show, v.Heart, v.Duration})
+			h := make([]int, 0)
+			for i := 0; i < v.Heart; i++ {
+				h = append(h, i)
+			}
+			rating := calc_rating(v.Heart, v.Duration)
+			pd = append(pd, userPageData{user, v.Title, v.Show, h, v.Duration, rating})
 		}
 		dat := indexPageData{pd}
 		ren.HTML(200, "user", dat)
