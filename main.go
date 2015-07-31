@@ -398,7 +398,7 @@ func db_new_data(db *sql.DB) error {
 func calc_rating(heart int, duration int) int {
 	dur_rating := (duration * 7) / (600 * 22)
 	heart_rating := (15 * heart) / 4
-	return dur_rating * heart_rating
+	return dur_rating + heart_rating
 }
 
 func launch_web(db *sql.DB) {
