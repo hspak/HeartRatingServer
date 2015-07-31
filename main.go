@@ -76,11 +76,6 @@ func setup_db() *sql.DB {
 		panic(err.Error())
 	}
 
-	_, err = db.Exec(`DROP DATABASE IF EXISTS HeartRating`)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	_, err = db.Exec(`CREATE DATABASE IF NOT EXISTS HeartRating`)
 	if err != nil {
 		log.Fatal(err)
@@ -528,6 +523,5 @@ func main() {
 	db := setup_db()
 	defer db.Close()
 
-	test_data(db)
 	launch_web(db)
 }
