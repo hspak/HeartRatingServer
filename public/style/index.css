@@ -1,3 +1,19 @@
+.avg {
+  font-size: 18px;
+  height: 120px !important;
+  /* background: #444 !important; */
+  margin-bottom: 20px !important;
+}
+
+.avg-stuff {
+  text-align: right;
+}
+
+.avg-title {
+  font-size: 22px;
+  margin-bottom: 35px;
+}
+
 .list-item {
   padding: 5px;
   margin-bottom: 7px;
@@ -26,7 +42,7 @@
 }
 
 .list-item-rating {
-  margin-right: -170px;
+  margin-right: -195px;
   margin-left: auto;
   display: inline-block;
   float: right;

@@ -35,6 +35,13 @@ type indexPageData struct {
 	Fill []userPageData
 }
 
+type programPageData struct {
+	AvgRating   int
+	AvgDuration int
+	Heart       []int
+	Fill        []userPageData
+}
+
 type userPageData struct {
 	User     string
 	Title    string
@@ -74,6 +81,11 @@ func setup_db() *sql.DB {
 	err = db.Ping()
 	if err != nil {
 		panic(err.Error())
+	}
+
+	_, err = db.Exec(`DROP DATABASE IF EXISTS HeartRating`)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	_, err = db.Exec(`CREATE DATABASE IF NOT EXISTS HeartRating`)
@@ -182,7 +194,7 @@ func db_get_user_id(db *sql.DB, user string) (int, error) {
 
 func db_get_user(db *sql.DB, id int) (string, error) {
 	var name string
-	query := `SELECT id FROM HeartRating.Users WHERE id=?;`
+	query := `SELECT username FROM HeartRating.Users WHERE id=?;`
 	row, err := db.Query(query, id)
 	if err != nil {
 		fmt.Println(err)
@@ -323,7 +335,7 @@ func db_get_program_sessions(db *sql.DB, show string, title string) ([]SessionP,
 		return nil, err
 	}
 
-	query := `SELECT user_id, heart, duration FROM HeartRating.Sessions WHERE id=? ORDER BY created_at DESC;`
+	query := `SELECT user_id, heart, duration FROM HeartRating.Sessions WHERE program_id=? ORDER BY created_at DESC;`
 	row, err := db.Query(query, id)
 	if err != nil {
 		fmt.Println(err)
@@ -391,9 +403,9 @@ func db_new_data(db *sql.DB) error {
 }
 
 func calc_rating(heart int, duration int) int {
-	dur_rating := (duration * 7) / (6000 * 22)
+	dur_rating := (duration * 6) / (6000 * 22)
 	fmt.Println("DURATION RATING", dur_rating)
-	heart_rating := (15 * heart) / 4
+	heart_rating := (20 * heart) / 4
 	fmt.Println("HEART RATING", heart_rating)
 	return dur_rating + heart_rating
 }
@@ -440,16 +452,29 @@ func launch_web(db *sql.DB) {
 		i, _ := strconv.Atoi(params["pid"])
 		show, title, _ := db_get_program(db, i)
 		ses, _ := db_get_program_sessions(db, show, title)
+		avgRating := 0
+		avgDuration := 0
+		avgHearts := 0
 		for _, v := range ses {
 			h := make([]int, 0)
 			for i := 0; i < v.Heart; i++ {
 				h = append(h, i)
 			}
+			avgHearts += v.Heart
+			avgDuration += v.Duration / 60000
 			rating := calc_rating(v.Heart, v.Duration)
+			avgRating += rating
 			pd = append(pd, userPageData{v.User, v.Title, v.Show, h, v.Duration / 60000, rating, i})
 		}
-		dat := indexPageData{pd}
-		ren.HTML(200, "user", dat)
+		avgRating /= len(ses)
+		avgDuration /= len(ses)
+		avgHearts /= len(ses)
+		avgh := make([]int, 0)
+		for i := 0; i < avgHearts; i++ {
+			avgh = append(avgh, i)
+		}
+		dat := programPageData{avgRating, avgDuration, avgh, pd}
+		ren.HTML(200, "program", dat)
 	})
 
 	m.Post("/api/save", func(r *http.Request) string {
@@ -495,31 +520,62 @@ func launch_web(db *sql.DB) {
 }
 
 func test_data(db *sql.DB) {
-	db_new_user(db, "alice")
-	db_new_user(db, "bob")
-	db_new_user(db, "carl")
-	db_new_user(db, "dan")
-	db_new_user(db, "evan")
-	db_new_user(db, "george")
-	db_new_program(db, "show", "title")
+	db_new_user(db, "Alice")
+	db_new_user(db, "Bob")
+	db_new_user(db, "Carl")
+	db_new_user(db, "Dan")
+	db_new_user(db, "Evan")
+	db_new_user(db, "George")
+	db_new_user(db, "Harry")
+	db_new_user(db, "Iggy")
+	db_new_user(db, "Justine")
 
-	pid, _ := db_get_program_id(db, "show", "title")
-	uid, _ := db_get_user_id(db, "alice")
-	uid2, _ := db_get_user_id(db, "bob")
-	uid3, _ := db_get_user_id(db, "carl")
+	p := "Pilot"
 
-	db_new_session(db, pid, uid, 1, 1)
-	db_new_session(db, pid, uid2, 1, 1)
-	db_new_session(db, pid, uid3, 1, 1)
-	db_new_session(db, pid, uid2, 1, 1)
-	db_new_session(db, pid, uid3, 1, 1)
-	db_new_session(db, pid, uid, 1, 1)
-	db_new_session(db, pid, uid, 1, 1)
+	db_new_program(db, p, "Daredevil")
+	db_new_program(db, p, "House")
+	db_new_program(db, p, "House of Cards")
+	db_new_program(db, p, "Survivor")
+	db_new_program(db, p, "Jeopardy")
+	db_new_program(db, p, "Shark Tank")
+	db_new_program(db, p, "Teen Moms")
+	db_new_program(db, p, "Cops")
+
+	pid, _ := db_get_program_id(db, p, "Daredevil")
+	ppid, _ := db_get_program_id(db, p, "House")
+	pppid, _ := db_get_program_id(db, p, "House of Cards")
+	ppppid, _ := db_get_program_id(db, p, "Survivor")
+	pppppid, _ := db_get_program_id(db, p, "Jeopardy")
+	ppppppid, _ := db_get_program_id(db, p, "Shark Tank")
+	pppppppid, _ := db_get_program_id(db, p, "Teen Moms")
+	ppppppppid, _ := db_get_program_id(db, p, "Cops")
+
+	uid, _ := db_get_user_id(db, "Alice")
+	uid2, _ := db_get_user_id(db, "Bob")
+	uid3, _ := db_get_user_id(db, "Carl")
+	uid4, _ := db_get_user_id(db, "Dan")
+	uid5, _ := db_get_user_id(db, "Evan")
+	uid6, _ := db_get_user_id(db, "George")
+	uid7, _ := db_get_user_id(db, "Harry")
+	uid8, _ := db_get_user_id(db, "Iggy")
+
+	// pid, uid, heart, duration
+	db_new_session(db, pid, uid, 8, 22*1000*60)
+	db_new_session(db, ppid, uid2, 7, 5*1000*60)
+	db_new_session(db, pppid, uid3, 5, 9*1000*60)
+	db_new_session(db, ppppid, uid2, 1, 5*1000*60)
+	db_new_session(db, pppppid, uid3, -1, 8*1000*60)
+	db_new_session(db, ppppppid, uid4, 4, 10*1000*60)
+	db_new_session(db, pppppppid, uid5, 2, 18*1000*60)
+	db_new_session(db, pppppppid, uid7, 3, 11*1000*60)
+	db_new_session(db, ppppppppid, uid8, 2, 8*1000*60)
+	db_new_session(db, ppppppppid, uid6, 5, 12*1000*60)
 }
 
 func main() {
 	db := setup_db()
 	defer db.Close()
 
+	test_data(db)
 	launch_web(db)
 }

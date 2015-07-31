@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>HeartRating</title>
+    <link rel="stylesheet" type="text/css" href="/style/base.css">
+    <link rel="stylesheet" type="text/css" href="/style/index.css">
+    <link href='http://fonts.googleapis.com/css?family=Montserrat:400,700' rel='stylesheet' type='text/css'>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="header-title"><a href="/">HeartRating</a></div>
+      </div>
+      <div id="header-heart"></div>
+      <ul class="list-table">
+        <li class="avg list-item">
+          <div class="avg-title">Averages:</div>
+          <div class="avg-stuff">
+            <div class="avg-duration">{{ .AvgDuration }} minutes</div>
+            <div class="avg-rating">{{ .AvgRating }}/100</div>
+              {{ range $h := .Heart }}
+                <div id="heart"></div>
+              {{ end }}
+          </div>
+        </li>
+      {{ range $val := .Fill }}
+        <li class="list-item">
+          <div class="list-item-user">{{ .User }}</div>
+          <div class="list-item-title"><a href="/program/{{ .Pid }}">{{ .Title }}: {{ .Show }}</a></div>
+          <div class="list-item-duration">{{ .Duration }} min</div>
+          <div class="list-item-rating">Rating: {{ .Rating }}/100</div>
+          <div class="list-item-hearts">
+            {{ range $h := .Heart }}
+              <div id="heart"></div>
+            {{ end }}
+          </div>
+        </li>
+      {{ end }}
+      </ul>
+    </div>
+  </body>
+</html>
