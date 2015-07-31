@@ -351,7 +351,7 @@ func launch_web(db *sql.DB) {
 					h = append(h, i)
 				}
 				rating := calc_rating(v.Heart, v.Duration)
-				pd = append(pd, userPageData{u, v.Title, v.Show, h, v.Duration, rating})
+				pd = append(pd, userPageData{u, v.Title, v.Show, h, v.Duration / 60000, rating})
 			}
 		}
 		dat := indexPageData{pd}
@@ -367,7 +367,7 @@ func launch_web(db *sql.DB) {
 				h = append(h, i)
 			}
 			rating := calc_rating(v.Heart, v.Duration)
-			pd = append(pd, userPageData{user, v.Title, v.Show, h, v.Duration, rating})
+			pd = append(pd, userPageData{user, v.Title, v.Show, h, v.Duration / 60000, rating})
 		}
 		dat := indexPageData{pd}
 		ren.HTML(200, "user", dat)
