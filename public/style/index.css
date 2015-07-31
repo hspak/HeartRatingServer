@@ -1,18 +1,15 @@
 .list-item {
   padding: 5px;
-  margin-bottom: 10px;
+  margin-bottom: 7px;
   width: 600px;
   background: #fefefe;
   box-shadow: 0px 1px 3px #ff0000;
+  height: 30px;
 }
 
-.list-item-name {
-  /* position: relative; */
-  padding: 10px;
-  height: -10px;
-  display: block;
-  float: left;
-  /* line-height: -50px; */
+.list-item-user {
+  display: inline-block;
+  width: 100px;
 }
 
 .list-item-show {
@@ -21,19 +18,23 @@
 
 .list-item-title {
   display: inline-block;
-  font-weight: bold;
-  float: left;
 }
 
 .list-item-duration {
   display: inline-block;
+  float: right;
 }
 
 .list-item-rating {
+  margin-right: -290px;
+  margin-left: auto;
   display: inline-block;
+  float: right;
 }
 
 .list-item-hearts {
+  margin-right: -150px;
   display: inline-block;
+  float: right;
+  margin-top: 19px;
 }
- 
