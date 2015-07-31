@@ -12,11 +12,8 @@ import "github.com/go-martini/martini"
 import "github.com/martini-contrib/render"
 
 type indexPageData struct {
-	users    [20]string
-	show     [20]string
-	title    [20]string
-	heart    [20]int
-	duration [20]int
+	Users []string
+	Ses   []session
 }
 
 type userPageData struct {
@@ -39,6 +36,11 @@ func setup_db() *sql.DB {
 	err = db.Ping()
 	if err != nil {
 		panic(err.Error())
+	}
+
+	_, err = db.Exec(`DROP DATABASE HeartRating`)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	_, err = db.Exec(`CREATE DATABASE IF NOT EXISTS HeartRating`)
@@ -86,7 +88,7 @@ func setup_db() *sql.DB {
 func db_get_program(db *sql.DB, pid int) (string, string, error) {
 	show := ""
 	title := ""
-	query := `SELECT showname, title FROM Programs WHERE program_id='$1';`
+	query := `SELECT showname, title FROM Programs WHERE program_id='?';`
 	row, err := db.Query(query, pid)
 	if err != nil {
 		return show, title, err
@@ -102,7 +104,7 @@ func db_get_program(db *sql.DB, pid int) (string, string, error) {
 
 func db_get_user_id(db *sql.DB, user string) (int, error) {
 	id := -1
-	query := `SELECT id FROM Users WHERE username='$1';`
+	query := `SELECT id FROM Users WHERE username='?';`
 	row, err := db.Query(query, user)
 	if err != nil {
 		return id, err
@@ -129,8 +131,25 @@ func db_get_users(db *sql.DB) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
+		i += 1
 	}
 	return users, nil
+}
+
+func db_get_program_pid(db *sql.DB, show string, title string) (int, error) {
+	id := -1
+	query := `SELECT id FROM Programs WHERE showname='?' and title='?';`
+	row, err := db.Query(query, show, title)
+	if err != nil {
+		return id, err
+	}
+	if row.Next() {
+		err = row.Scan(&id)
+		if err != nil {
+			return id, err
+		}
+	}
+	return id, nil
 }
 
 func db_get_user_sessions(db *sql.DB, user string) ([]session, error) {
@@ -139,7 +158,7 @@ func db_get_user_sessions(db *sql.DB, user string) ([]session, error) {
 		return nil, err
 	}
 
-	query := `SELECT program_id, heart, duration FROM Sessions WHERE user_id='$1' ORDER BY created_at DESC;`
+	query := `SELECT program_id, heart, duration FROM Sessions WHERE user_id='?' ORDER BY created_at DESC;`
 	row, err := db.Query(query, id)
 	sessions := make([]session, 0)
 	if err != nil {
@@ -164,7 +183,7 @@ func db_get_user_sessions(db *sql.DB, user string) ([]session, error) {
 }
 
 func db_new_user(db *sql.DB, user string) error {
-	cmd := `INSERT INTO Users(username) values(?);`
+	cmd := `INSERT INTO Users(username, last_update) values(?, NOW());`
 	_, err := db.Exec(cmd, user)
 	if err != nil {
 		return err
@@ -173,7 +192,7 @@ func db_new_user(db *sql.DB, user string) error {
 }
 
 func db_new_program(db *sql.DB, show string, title string) error {
-	cmd := `INSERT INTO Programs(showname, title) values($1, $2);`
+	cmd := `INSERT INTO Programs(showname, title) values(?, ?);`
 	_, err := db.Exec(cmd, show, title)
 	if err != nil {
 		return err
@@ -183,7 +202,7 @@ func db_new_program(db *sql.DB, show string, title string) error {
 
 func db_new_session(db *sql.DB, pid int, uid int, heart int, duration int) error {
 	cmd := `INSERT INTO Sessions(program_id, user_id, heart, duration, created_at)
-			values($1, $2, $3, $4, NOW());`
+			values(?, ?, ?, ?, NOW());`
 	_, err := db.Exec(cmd, pid, uid, heart, duration)
 	if err != nil {
 		return err
@@ -195,11 +214,19 @@ func db_new_data(db *sql.DB) error {
 	return nil
 }
 
-func launch_web() {
+func launch_web(db *sql.DB) {
 	m := martini.Classic()
 	m.Use(render.Renderer())
 	m.Get("/", func(ren render.Render) {
-		ren.HTML(200, "index", nil)
+		ses := make([]session, 0)
+		users, _ := db_get_users(db)
+		for _, u := range users {
+			s, _ := db_get_user_sessions(db, u)
+			ses = append(ses, s...)
+		}
+		dat := indexPageData{users, ses}
+		fmt.Println(ses)
+		ren.HTML(200, "index", dat)
 	})
 	m.Get("/:user", func(params martini.Params, ren render.Render) {
 		// user := params["user"]
@@ -217,32 +244,21 @@ func main() {
 	db := setup_db()
 	defer db.Close()
 
-	err := db_new_user(db, "alice")
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = db_new_user(db, "bob")
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = db_new_user(db, "carl")
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = db_new_user(db, "dan")
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = db_new_user(db, "evan")
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = db_new_user(db, "george")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	users, _ := db_get_users(db)
-	fmt.Println(users)
-	launch_web()
+	db_new_user(db, "alice")
+	db_new_user(db, "bob")
+	db_new_user(db, "carl")
+	db_new_user(db, "dan")
+	db_new_user(db, "evan")
+	db_new_user(db, "george")
+	db_new_program(db, "show", "title")
+	pid, _ := db_get_program_pid(db, "show", "title")
+	uid, _ := db_get_user_id(db, "alice")
+	db_new_session(db, pid, uid, 1, 1)
+	db_new_session(db, pid, uid, 1, 1)
+	db_new_session(db, pid, uid, 1, 1)
+	db_new_session(db, pid, uid, 1, 1)
+	db_new_session(db, pid, uid, 1, 1)
+	db_new_session(db, pid, uid, 1, 1)
+	db_new_session(db, pid, uid, 1, 1)
+	launch_web(db)
 }
