@@ -41,6 +41,11 @@ func setup_db() *sql.DB {
 		panic(err.Error())
 	}
 
+	_, err = db.Exec(`DROP DATABASE IF EXISTS HeartRating`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	_, err = db.Exec(`CREATE DATABASE IF NOT EXISTS HeartRating`)
 	if err != nil {
 		log.Fatal(err)
@@ -247,8 +252,14 @@ func launch_web(db *sql.DB) {
 		ren.HTML(200, "index", dat)
 	})
 	m.Get("/:user", func(params martini.Params, ren render.Render) {
-		// user := params["user"]
-		ren.HTML(200, "user", nil)
+		pd := make([]userPageData, 0)
+		user := params["user"]
+		ses, _ := db_get_user_sessions(db, user)
+		for _, v := range ses {
+			pd = append(pd, userPageData{user, v.title, v.show, v.heart, v.duration})
+		}
+		dat := indexPageData{pd}
+		ren.HTML(200, "user", dat)
 	})
 	m.Post("/api/save", func(r *http.Request) string {
 		body, _ := ioutil.ReadAll(r.Body)
@@ -259,10 +270,6 @@ func launch_web(db *sql.DB) {
 }
 
 func test_data(db *sql.DB) {
-	_, err = db.Exec(`DROP DATABASE HeartRating`)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	db_new_user(db, "alice")
 	db_new_user(db, "bob")
