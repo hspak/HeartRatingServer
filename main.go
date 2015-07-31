@@ -324,6 +324,7 @@ func db_new_data(db *sql.DB) error {
 
 func launch_web(db *sql.DB) {
 	m := martini.Classic()
+	m.RunOnAddr(":8080")
 	m.Use(render.Renderer())
 	m.Get("/", func(ren render.Render) {
 		pd := make([]userPageData, 0)
