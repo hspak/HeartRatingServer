@@ -39,20 +39,20 @@
 }
 
 .list-item-duration {
-  display: inline-block;
-  float: right;
+  display: block;
+  text-align: right;
+  margin-top: -19px;
 }
 
 .list-item-rating {
-  margin-right: -195px;
+  margin-right: -145px;
+  margin-top: -19px;
   margin-left: auto;
-  display: inline-block;
-  float: right;
+  display: block;
+  text-align: right;
 }
 
 .list-item-hearts {
-  margin-right: -40px;
-  display: inline-block;
-  float: right;
-  margin-top: 19px;
+  display: block;
+  text-align: right;
 }
