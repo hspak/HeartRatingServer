@@ -391,7 +391,7 @@ func db_new_data(db *sql.DB) error {
 }
 
 func calc_rating(heart int, duration int) int {
-	dur_rating := (duration * 7) / (600 * 22)
+	dur_rating := (duration * 7) / (6000 * 22)
 	fmt.Println("DURATION RATING", dur_rating)
 	heart_rating := (15 * heart) / 4
 	fmt.Println("HEART RATING", heart_rating)
