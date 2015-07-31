@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 )
@@ -21,6 +20,14 @@ type ApiSession struct {
 type ApiUsers struct {
 	U      []User `json:"users"`
 	Status string `json:"status"`
+}
+
+type PostData struct {
+	Heart    int    `json:"heart-score"`
+	Duration int    `json:"watch-time"`
+	Show     string `json:"show"`
+	Title    string `json:"title"`
+	User     string `json:"user"`
 }
 
 type indexPageData struct {
@@ -124,6 +131,23 @@ func db_get_program(db *sql.DB, pid int) (string, string, error) {
 	return show, title, err
 }
 
+func db_user_exist(db *sql.DB, user string) bool {
+	if len(user) == 0 {
+		return false
+	}
+
+	query := `SELECT id FROM HeartRating.Users WHERE username=?;`
+	row, err := db.Query(query, user)
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	if row.Next() {
+		return true
+	}
+	return false
+}
+
 func db_get_user_id(db *sql.DB, user string) (int, error) {
 	if len(user) == 0 {
 		return -1, nil
@@ -192,6 +216,19 @@ func db_get_users(db *sql.DB) ([]string, error) {
 	}
 	fmt.Println("users", users)
 	return users, nil
+}
+
+func db_program_exist(db *sql.DB, show string, title string) bool {
+	query := `SELECT id FROM HeartRating.Programs WHERE showname=? and title=?;`
+	row, err := db.Query(query, show, title)
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	if row.Next() {
+		return true
+	}
+	return false
 }
 
 func db_get_program_id(db *sql.DB, show string, title string) (int, error) {
@@ -272,6 +309,12 @@ func db_new_session(db *sql.DB, pid int, uid int, heart int, duration int) error
 	if err != nil {
 		return err
 	}
+	cmd = `UPDATE HeartRating.Users SET last_update=NOW() WHERE id=?`
+	_, err = db.Exec(cmd, uid)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
 	return nil
 }
 
@@ -306,8 +349,25 @@ func launch_web(db *sql.DB) {
 	})
 
 	m.Post("/api/save", func(r *http.Request) string {
-		body, _ := ioutil.ReadAll(r.Body)
-		fmt.Println(string(body))
+		var dat PostData
+		err := json.NewDecoder(r.Body).Decode(&dat)
+		if err != nil {
+			log.Println(err)
+			return "failure"
+		}
+
+		if !db_user_exist(db, dat.User) {
+			db_new_user(db, dat.User)
+		}
+		uid, _ := db_get_user_id(db, dat.User)
+
+		if !db_program_exist(db, dat.Show, dat.Title) {
+			db_new_program(db, dat.Show, dat.Title)
+		}
+		pid, _ := db_get_program_id(db, dat.Show, dat.Title)
+
+		db_new_session(db, pid, uid, dat.Heart, dat.Duration)
+
 		return "success"
 	})
 	m.Get("/api/sessions/:user", func(params martini.Params) string {
