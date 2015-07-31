@@ -17,7 +17,10 @@
         <li class="avg list-item">
           <div class="avg-title">Averages:</div>
           <div class="avg-stuff">
+            <div class="avg-label">Time Watched</div>
             <div class="avg-duration">{{ .AvgDuration }} minutes</div>
+            <br>
+            <div class="avg-label">Rating</div>
             <div class="avg-rating">{{ .AvgRating }}/100</div>
               {{ range $h := .Heart }}
                 <div id="heart"></div>

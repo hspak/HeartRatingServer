@@ -1,7 +1,5 @@
 .avg {
-  font-size: 18px;
   height: 120px !important;
-  /* background: #444 !important; */
   margin-bottom: 20px !important;
 }
 
@@ -11,7 +9,11 @@
 
 .avg-title {
   font-size: 22px;
-  margin-bottom: 35px;
+  margin-bottom: -12px;
+}
+
+.avg-label {
+  font-weight: bold;
 }
 
 .list-item {
