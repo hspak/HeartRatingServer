@@ -12,12 +12,15 @@ import "github.com/go-martini/martini"
 import "github.com/martini-contrib/render"
 
 type indexPageData struct {
-	Users []string
-	Ses   []session
+	Fill []userPageData
 }
 
 type userPageData struct {
-	user string
+	User     string
+	Title    string
+	Show     string
+	Heart    int
+	Duration int
 }
 
 type session struct {
@@ -88,14 +91,16 @@ func setup_db() *sql.DB {
 func db_get_program(db *sql.DB, pid int) (string, string, error) {
 	show := ""
 	title := ""
-	query := `SELECT showname, title FROM Programs WHERE program_id='?';`
+	query := `SELECT showname, title FROM HeartRating.Programs WHERE id=?;`
 	row, err := db.Query(query, pid)
 	if err != nil {
+		fmt.Println(err)
 		return show, title, err
 	}
 	if row.Next() {
 		err = row.Scan(&show, &title)
 		if err != nil {
+			fmt.Println(err)
 			return show, title, err
 		}
 	}
@@ -103,52 +108,65 @@ func db_get_program(db *sql.DB, pid int) (string, string, error) {
 }
 
 func db_get_user_id(db *sql.DB, user string) (int, error) {
-	id := -1
-	query := `SELECT id FROM Users WHERE username='?';`
+	if len(user) == 0 {
+		return -1, nil
+	}
+
+	var id int
+	query := `SELECT id FROM HeartRating.Users WHERE username=?;`
 	row, err := db.Query(query, user)
 	if err != nil {
-		return id, err
+		fmt.Println(err)
+		return -1, err
 	}
 	if row.Next() {
 		err = row.Scan(&id)
 		if err != nil {
-			return id, err
+			fmt.Println(err)
+			return -1, err
 		}
 	}
+	fmt.Println("user id", user, id)
 	return id, nil
 }
 
 func db_get_users(db *sql.DB) ([]string, error) {
-	query := `SELECT username FROM Users ORDER BY last_update DESC LIMIT 20;`
+	query := `SELECT username FROM HeartRating.Users ORDER BY last_update DESC LIMIT 20;`
 	row, err := db.Query(query)
 	users := make([]string, 10)
 	if err != nil {
+		fmt.Println(err)
 		return nil, err
 	}
 	i := 0
 	for row.Next() {
 		err = row.Scan(&(users[i]))
 		if err != nil {
+			fmt.Println(err)
 			return nil, err
 		}
 		i += 1
 	}
+	fmt.Println("users", users)
 	return users, nil
 }
 
-func db_get_program_pid(db *sql.DB, show string, title string) (int, error) {
+func db_get_program_id(db *sql.DB, show string, title string) (int, error) {
 	id := -1
-	query := `SELECT id FROM Programs WHERE showname='?' and title='?';`
+	query := `SELECT id FROM HeartRating.Programs WHERE showname=? and title=?;`
 	row, err := db.Query(query, show, title)
 	if err != nil {
+		fmt.Println(err)
 		return id, err
 	}
 	if row.Next() {
 		err = row.Scan(&id)
 		if err != nil {
+			fmt.Println(err)
 			return id, err
 		}
 	}
+	fmt.Println("program id", id)
 	return id, nil
 }
 
@@ -158,10 +176,11 @@ func db_get_user_sessions(db *sql.DB, user string) ([]session, error) {
 		return nil, err
 	}
 
-	query := `SELECT program_id, heart, duration FROM Sessions WHERE user_id='?' ORDER BY created_at DESC;`
+	query := `SELECT program_id, heart, duration FROM HeartRating.Sessions WHERE user_id=? ORDER BY created_at DESC;`
 	row, err := db.Query(query, id)
 	sessions := make([]session, 0)
 	if err != nil {
+		fmt.Println(err)
 		return nil, err
 	}
 	for row.Next() {
@@ -170,20 +189,23 @@ func db_get_user_sessions(db *sql.DB, user string) ([]session, error) {
 		var duration int
 		err = row.Scan(&pid, &heart, &duration)
 		if err != nil {
+			fmt.Println(err)
 			return nil, err
 		}
 		show, title, err := db_get_program(db, pid)
 		if err != nil {
+			fmt.Println(err)
 			return nil, err
 		}
 		s := session{title, show, heart, duration}
 		sessions = append(sessions, s)
 	}
+	fmt.Println("sessions", sessions)
 	return sessions, nil
 }
 
 func db_new_user(db *sql.DB, user string) error {
-	cmd := `INSERT INTO Users(username, last_update) values(?, NOW());`
+	cmd := `INSERT INTO HeartRating.Users(username, last_update) values(?, NOW());`
 	_, err := db.Exec(cmd, user)
 	if err != nil {
 		return err
@@ -192,7 +214,7 @@ func db_new_user(db *sql.DB, user string) error {
 }
 
 func db_new_program(db *sql.DB, show string, title string) error {
-	cmd := `INSERT INTO Programs(showname, title) values(?, ?);`
+	cmd := `INSERT INTO HeartRating.Programs(showname, title) values(?, ?);`
 	_, err := db.Exec(cmd, show, title)
 	if err != nil {
 		return err
@@ -201,7 +223,7 @@ func db_new_program(db *sql.DB, show string, title string) error {
 }
 
 func db_new_session(db *sql.DB, pid int, uid int, heart int, duration int) error {
-	cmd := `INSERT INTO Sessions(program_id, user_id, heart, duration, created_at)
+	cmd := `INSERT INTO HeartRating.Sessions(program_id, user_id, heart, duration, created_at)
 			values(?, ?, ?, ?, NOW());`
 	_, err := db.Exec(cmd, pid, uid, heart, duration)
 	if err != nil {
@@ -218,14 +240,15 @@ func launch_web(db *sql.DB) {
 	m := martini.Classic()
 	m.Use(render.Renderer())
 	m.Get("/", func(ren render.Render) {
-		ses := make([]session, 0)
+		pd := make([]userPageData, 0)
 		users, _ := db_get_users(db)
 		for _, u := range users {
 			s, _ := db_get_user_sessions(db, u)
-			ses = append(ses, s...)
+			for _, v := range s {
+				pd = append(pd, userPageData{u, v.title, v.show, v.heart, v.duration})
+			}
 		}
-		dat := indexPageData{users, ses}
-		fmt.Println(ses)
+		dat := indexPageData{pd}
 		ren.HTML(200, "index", dat)
 	})
 	m.Get("/:user", func(params martini.Params, ren render.Render) {
@@ -240,10 +263,7 @@ func launch_web(db *sql.DB) {
 	m.Run()
 }
 
-func main() {
-	db := setup_db()
-	defer db.Close()
-
+func test_data(db *sql.DB) {
 	db_new_user(db, "alice")
 	db_new_user(db, "bob")
 	db_new_user(db, "carl")
@@ -251,14 +271,25 @@ func main() {
 	db_new_user(db, "evan")
 	db_new_user(db, "george")
 	db_new_program(db, "show", "title")
-	pid, _ := db_get_program_pid(db, "show", "title")
+
+	pid, _ := db_get_program_id(db, "show", "title")
 	uid, _ := db_get_user_id(db, "alice")
+	uid2, _ := db_get_user_id(db, "bob")
+	uid3, _ := db_get_user_id(db, "carl")
+
+	db_new_session(db, pid, uid, 1, 1)
+	db_new_session(db, pid, uid2, 1, 1)
+	db_new_session(db, pid, uid3, 1, 1)
+	db_new_session(db, pid, uid2, 1, 1)
+	db_new_session(db, pid, uid3, 1, 1)
 	db_new_session(db, pid, uid, 1, 1)
 	db_new_session(db, pid, uid, 1, 1)
-	db_new_session(db, pid, uid, 1, 1)
-	db_new_session(db, pid, uid, 1, 1)
-	db_new_session(db, pid, uid, 1, 1)
-	db_new_session(db, pid, uid, 1, 1)
-	db_new_session(db, pid, uid, 1, 1)
+}
+
+func main() {
+	db := setup_db()
+	defer db.Close()
+
+	test_data(db)
 	launch_web(db)
 }

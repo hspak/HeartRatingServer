@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>HeartRating</title>
+  </head>
+  <body>
+    <p>hi</p>
+    <div class="list-urls">
+      {{ range $val := .Fill }}
+        <p>{{ .User }} {{ .Title }} {{ .Show }} {{ .Heart }} {{ .Duration }}</p>
+      {{ end }}
+    </div>
+  </body>
+</html>
