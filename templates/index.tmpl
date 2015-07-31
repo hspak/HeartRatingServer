@@ -2,13 +2,27 @@
 <html>
   <head>
     <title>HeartRating</title>
+    <link rel="stylesheet" type="text/css" href="/style/base.css">
+    <link rel="stylesheet" type="text/css" href="/style/index.css">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   </head>
   <body>
     <div class="container">
-      <div class="header-title">HeartRating</div>
-        {{ range $val := .Fill }}
-          <p>{{ .User }} {{ .Title }} {{ .Show }} {{ .Heart }} {{ .Duration }}</p>
-        {{ end }}
+      <div class="header">
+        <div class="header-title">HeartRating</div>
+      </div>
+      <div id="heart"></div>
+      <ul class="list-table">
+      {{ range $val := .Fill }}
+        <li>
+        {{ .User }}
+        {{ .Title }}
+        {{ .Show }}
+        {{ .Heart }}
+        {{ .Duration }}
+        </li>
+      {{ end }}
+      </ul>
     </div>
   </body>
 </html>

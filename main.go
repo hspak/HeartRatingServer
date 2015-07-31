@@ -121,6 +121,7 @@ func db_get_program(db *sql.DB, pid int) (string, string, error) {
 		fmt.Println(err)
 		return show, title, err
 	}
+	defer row.Close()
 	if row.Next() {
 		err = row.Scan(&show, &title)
 		if err != nil {
@@ -142,6 +143,7 @@ func db_user_exist(db *sql.DB, user string) bool {
 		fmt.Println(err)
 		return false
 	}
+	defer row.Close()
 	if row.Next() {
 		return true
 	}
@@ -160,6 +162,7 @@ func db_get_user_id(db *sql.DB, user string) (int, error) {
 		fmt.Println(err)
 		return -1, err
 	}
+	defer row.Close()
 	if row.Next() {
 		err = row.Scan(&id)
 		if err != nil {
@@ -174,11 +177,12 @@ func db_get_user_id(db *sql.DB, user string) (int, error) {
 func db_get_users_all(db *sql.DB) ([]User, error) {
 	query := `SELECT id, username FROM HeartRating.Users ORDER BY last_update DESC;`
 	row, err := db.Query(query)
-	users := make([]User, 0)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
+	defer row.Close()
+	users := make([]User, 0)
 	i := 0
 	for row.Next() {
 		var u string
@@ -198,11 +202,12 @@ func db_get_users_all(db *sql.DB) ([]User, error) {
 func db_get_users(db *sql.DB) ([]string, error) {
 	query := `SELECT username FROM HeartRating.Users ORDER BY last_update DESC;`
 	row, err := db.Query(query)
-	users := make([]string, 0)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
+	defer row.Close()
+	users := make([]string, 0)
 	i := 0
 	for row.Next() {
 		var u string
@@ -225,6 +230,7 @@ func db_program_exist(db *sql.DB, show string, title string) bool {
 		fmt.Println(err)
 		return false
 	}
+	defer row.Close()
 	if row.Next() {
 		return true
 	}
@@ -239,6 +245,7 @@ func db_get_program_id(db *sql.DB, show string, title string) (int, error) {
 		fmt.Println(err)
 		return id, err
 	}
+	defer row.Close()
 	if row.Next() {
 		err = row.Scan(&id)
 		if err != nil {
@@ -258,11 +265,12 @@ func db_get_user_sessions(db *sql.DB, user string) ([]Session, error) {
 
 	query := `SELECT program_id, heart, duration FROM HeartRating.Sessions WHERE user_id=? ORDER BY created_at DESC;`
 	row, err := db.Query(query, id)
-	sessions := make([]Session, 0)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
+	defer row.Close()
+	sessions := make([]Session, 0)
 	for row.Next() {
 		var pid int
 		var heart int
@@ -324,7 +332,6 @@ func db_new_data(db *sql.DB) error {
 
 func launch_web(db *sql.DB) {
 	m := martini.Classic()
-	m.RunOnAddr(":8080")
 	m.Use(render.Renderer())
 	m.Get("/", func(ren render.Render) {
 		pd := make([]userPageData, 0)
