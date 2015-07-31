@@ -4,11 +4,12 @@
     <title>HeartRating</title>
   </head>
   <body>
-    <p>hi</p>
-    <div class="list-urls">
-      {{ range $val := .Fill }}
-        <p>{{ .User }} {{ .Title }} {{ .Show }} {{ .Heart }} {{ .Duration }}</p>
-      {{ end }}
+    <div class="container">
+      <div class="header-title">HeartRating</div>
+        {{ range $val := .Fill }}
+          <p>{{ .User }} {{ .Title }} {{ .Show }} {{ .Heart }} {{ .Duration }}</p>
+        {{ end }}
+      </div>
     </div>
   </body>
 </html>

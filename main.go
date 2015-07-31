@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -10,6 +11,17 @@ import (
 import _ "github.com/go-sql-driver/mysql"
 import "github.com/go-martini/martini"
 import "github.com/martini-contrib/render"
+
+type ApiSession struct {
+	U      User      `json:"user"`
+	S      []Session `json:"sessions"`
+	Status string    `json:"status"`
+}
+
+type ApiUsers struct {
+	U      []User `json:"users"`
+	Status string `json:"status"`
+}
 
 type indexPageData struct {
 	Fill []userPageData
@@ -23,11 +35,16 @@ type userPageData struct {
 	Duration int
 }
 
-type session struct {
-	title    string
-	show     string
-	heart    int
-	duration int
+type User struct {
+	Id   int
+	Name string
+}
+
+type Session struct {
+	Title    string
+	Show     string
+	Heart    int
+	Duration int
 }
 
 func setup_db() *sql.DB {
@@ -130,21 +147,47 @@ func db_get_user_id(db *sql.DB, user string) (int, error) {
 	return id, nil
 }
 
-func db_get_users(db *sql.DB) ([]string, error) {
-	query := `SELECT username FROM HeartRating.Users ORDER BY last_update DESC LIMIT 20;`
+func db_get_users_all(db *sql.DB) ([]User, error) {
+	query := `SELECT id, username FROM HeartRating.Users ORDER BY last_update DESC;`
 	row, err := db.Query(query)
-	users := make([]string, 10)
+	users := make([]User, 0)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
 	i := 0
 	for row.Next() {
-		err = row.Scan(&(users[i]))
+		var u string
+		var d int
+		err = row.Scan(&d, &u)
 		if err != nil {
 			fmt.Println(err)
 			return nil, err
 		}
+		users = append(users, User{d, u})
+		i += 1
+	}
+	fmt.Println("users", users)
+	return users, nil
+}
+
+func db_get_users(db *sql.DB) ([]string, error) {
+	query := `SELECT username FROM HeartRating.Users ORDER BY last_update DESC;`
+	row, err := db.Query(query)
+	users := make([]string, 0)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	i := 0
+	for row.Next() {
+		var u string
+		err = row.Scan(&u)
+		if err != nil {
+			fmt.Println(err)
+			return nil, err
+		}
+		users = append(users, u)
 		i += 1
 	}
 	fmt.Println("users", users)
@@ -170,7 +213,7 @@ func db_get_program_id(db *sql.DB, show string, title string) (int, error) {
 	return id, nil
 }
 
-func db_get_user_sessions(db *sql.DB, user string) ([]session, error) {
+func db_get_user_sessions(db *sql.DB, user string) ([]Session, error) {
 	id, err := db_get_user_id(db, user)
 	if id == -1 || err != nil {
 		return nil, err
@@ -178,7 +221,7 @@ func db_get_user_sessions(db *sql.DB, user string) ([]session, error) {
 
 	query := `SELECT program_id, heart, duration FROM HeartRating.Sessions WHERE user_id=? ORDER BY created_at DESC;`
 	row, err := db.Query(query, id)
-	sessions := make([]session, 0)
+	sessions := make([]Session, 0)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
@@ -197,7 +240,7 @@ func db_get_user_sessions(db *sql.DB, user string) ([]session, error) {
 			fmt.Println(err)
 			return nil, err
 		}
-		s := session{title, show, heart, duration}
+		s := Session{title, show, heart, duration}
 		sessions = append(sessions, s)
 	}
 	fmt.Println("sessions", sessions)
@@ -245,7 +288,7 @@ func launch_web(db *sql.DB) {
 		for _, u := range users {
 			s, _ := db_get_user_sessions(db, u)
 			for _, v := range s {
-				pd = append(pd, userPageData{u, v.title, v.show, v.heart, v.duration})
+				pd = append(pd, userPageData{u, v.Title, v.Show, v.Heart, v.Duration})
 			}
 		}
 		dat := indexPageData{pd}
@@ -256,21 +299,38 @@ func launch_web(db *sql.DB) {
 		user := params["user"]
 		ses, _ := db_get_user_sessions(db, user)
 		for _, v := range ses {
-			pd = append(pd, userPageData{user, v.title, v.show, v.heart, v.duration})
+			pd = append(pd, userPageData{user, v.Title, v.Show, v.Heart, v.Duration})
 		}
 		dat := indexPageData{pd}
 		ren.HTML(200, "user", dat)
 	})
+
 	m.Post("/api/save", func(r *http.Request) string {
 		body, _ := ioutil.ReadAll(r.Body)
 		fmt.Println(string(body))
 		return "success"
 	})
+	m.Get("/api/sessions/:user", func(params martini.Params) string {
+		user := params["user"]
+		ses, _ := db_get_user_sessions(db, user)
+		u, _ := db_get_user_id(db, user)
+		U := User{u, user}
+		fmt.Println("U", U)
+		fmt.Println("ses", ses)
+		resp := ApiSession{U, ses, "success"}
+		out, _ := json.MarshalIndent(resp, "", "  ")
+		return string(out)
+	})
+	m.Get("/api/users", func() string {
+		users, _ := db_get_users_all(db)
+		resp := ApiUsers{users, "success"}
+		out, _ := json.MarshalIndent(resp, "", "  ")
+		return string(out)
+	})
 	m.Run()
 }
 
 func test_data(db *sql.DB) {
-
 	db_new_user(db, "alice")
 	db_new_user(db, "bob")
 	db_new_user(db, "carl")
