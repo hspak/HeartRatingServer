@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 )
 import _ "github.com/go-sql-driver/mysql"
 import "github.com/go-martini/martini"
@@ -41,6 +42,7 @@ type userPageData struct {
 	Heart    []int
 	Duration int
 	Rating   int
+	Pid      int
 }
 
 type User struct {
@@ -53,6 +55,14 @@ type Session struct {
 	Show     string
 	Heart    int
 	Duration int
+}
+
+type SessionP struct {
+	Title    string
+	Show     string
+	Heart    int
+	Duration int
+	User     string
 }
 
 func setup_db() *sql.DB {
@@ -175,6 +185,25 @@ func db_get_user_id(db *sql.DB, user string) (int, error) {
 	return id, nil
 }
 
+func db_get_user(db *sql.DB, id int) (string, error) {
+	var name string
+	query := `SELECT id FROM HeartRating.Users WHERE id=?;`
+	row, err := db.Query(query, id)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+	defer row.Close()
+	if row.Next() {
+		err = row.Scan(&name)
+		if err != nil {
+			fmt.Println(err)
+			return "", err
+		}
+	}
+	return name, nil
+}
+
 func db_get_users_all(db *sql.DB) ([]User, error) {
 	query := `SELECT id, username FROM HeartRating.Users ORDER BY last_update DESC;`
 	row, err := db.Query(query)
@@ -293,6 +322,41 @@ func db_get_user_sessions(db *sql.DB, user string) ([]Session, error) {
 	return sessions, nil
 }
 
+func db_get_program_sessions(db *sql.DB, show string, title string) ([]SessionP, error) {
+	id, err := db_get_program_id(db, show, title)
+	if id == -1 || err != nil {
+		return nil, err
+	}
+
+	query := `SELECT user_id, heart, duration FROM HeartRating.Sessions WHERE id=? ORDER BY created_at DESC;`
+	row, err := db.Query(query, id)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	defer row.Close()
+	sessions := make([]SessionP, 0)
+	for row.Next() {
+		var uid int
+		var heart int
+		var duration int
+		err = row.Scan(&uid, &heart, &duration)
+		if err != nil {
+			fmt.Println(err)
+			return nil, err
+		}
+		user, err := db_get_user(db, uid)
+		if err != nil {
+			fmt.Println(err)
+			return nil, err
+		}
+		s := SessionP{title, show, heart, duration, user}
+		sessions = append(sessions, s)
+	}
+	fmt.Println("sessionps", sessions)
+	return sessions, nil
+}
+
 func db_new_user(db *sql.DB, user string) error {
 	cmd := `INSERT INTO HeartRating.Users(username, last_update) values(?, NOW());`
 	_, err := db.Exec(cmd, user)
@@ -351,13 +415,14 @@ func launch_web(db *sql.DB) {
 					h = append(h, i)
 				}
 				rating := calc_rating(v.Heart, v.Duration)
-				pd = append(pd, userPageData{u, v.Title, v.Show, h, v.Duration / 60000, rating})
+				pid, _ := db_get_program_id(db, v.Show, v.Title)
+				pd = append(pd, userPageData{u, v.Title, v.Show, h, v.Duration / 60000, rating, pid})
 			}
 		}
 		dat := indexPageData{pd}
 		ren.HTML(200, "index", dat)
 	})
-	m.Get("/:user", func(params martini.Params, ren render.Render) {
+	m.Get("/user/:user", func(params martini.Params, ren render.Render) {
 		pd := make([]userPageData, 0)
 		user := params["user"]
 		ses, _ := db_get_user_sessions(db, user)
@@ -367,7 +432,24 @@ func launch_web(db *sql.DB) {
 				h = append(h, i)
 			}
 			rating := calc_rating(v.Heart, v.Duration)
-			pd = append(pd, userPageData{user, v.Title, v.Show, h, v.Duration / 60000, rating})
+			pid, _ := db_get_program_id(db, v.Show, v.Title)
+			pd = append(pd, userPageData{user, v.Title, v.Show, h, v.Duration / 60000, rating, pid})
+		}
+		dat := indexPageData{pd}
+		ren.HTML(200, "user", dat)
+	})
+	m.Get("/program/:pid", func(params martini.Params, ren render.Render) {
+		pd := make([]userPageData, 0)
+		i, _ := strconv.Atoi(params["pid"])
+		show, title, _ := db_get_program(db, i)
+		ses, _ := db_get_program_sessions(db, show, title)
+		for _, v := range ses {
+			h := make([]int, 0)
+			for i := 0; i < v.Heart; i++ {
+				h = append(h, i)
+			}
+			rating := calc_rating(v.Heart, v.Duration)
+			pd = append(pd, userPageData{v.User, v.Title, v.Show, h, v.Duration / 60000, rating, i})
 		}
 		dat := indexPageData{pd}
 		ren.HTML(200, "user", dat)

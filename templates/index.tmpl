@@ -10,14 +10,14 @@
   <body>
     <div class="container">
       <div class="header">
-        <div class="header-title">HeartRating</div>
+        <div class="header-title"><a href="/">HeartRating</a></div>
       </div>
       <div id="header-heart"></div>
       <ul class="list-table">
       {{ range $val := .Fill }}
         <li class="list-item">
-          <div class="list-item-user">{{ .User }}</div>
-          <div class="list-item-title">{{ .Title }}: {{ .Show }}</div>
+          <div class="list-item-user"><a href="/user/{{ .User }}">{{ .User }}</a></div>
+          <div class="list-item-title"><a href="/program/{{ .Pid }}">{{ .Title }}: {{ .Show }}</a></div>
           <div class="list-item-duration">{{ .Duration }} min</div>
           <div class="list-item-rating">Rating: {{ .Rating }}/100</div>
           <div class="list-item-hearts">
