@@ -1,5 +1,5 @@
 .list-item {
-  padding: 10px;
+  padding: 5px;
   margin-bottom: 10px;
   width: 600px;
   background: #fefefe;
@@ -17,7 +17,6 @@
 
 .list-item-show {
   display: inline-block;
-  float: left;
 }
 
 .list-item-title {
@@ -27,14 +26,14 @@
 }
 
 .list-item-duration {
-  text-align: right;
+  display: inline-block;
 }
 
 .list-item-rating {
-  text-align: right;
+  display: inline-block;
 }
 
 .list-item-hearts {
-  text-align: right;
+  display: inline-block;
 }
  
